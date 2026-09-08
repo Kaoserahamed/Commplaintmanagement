@@ -46,7 +46,7 @@ export default function ComplaintCard({ complaint, onEdit, onDelete }: Complaint
   const isVideo = complaint.media_type === 'video';
 
   return (
-    <div className="card p-5 border-l-4 border-primary-500 hover:shadow-xl transition-all">
+    <div className="card p-5 border-l-4 border-primary-500 hover:shadow-xl transition-all flex flex-col h-full">
       {/* Header with Category and Priority */}
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-2">
@@ -54,19 +54,19 @@ export default function ComplaintCard({ complaint, onEdit, onDelete }: Complaint
             {categoryIcon}
           </span>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{complaint.title}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{complaint.title}</h3>
             <p className="text-xs text-gray-500">{CATEGORY_LABELS[complaint.category]}</p>
           </div>
         </div>
-        <div className="flex flex-col gap-2 items-end">
-          <span className={`badge ${priorityInfo.class} text-xs`}>
+        <div className="flex flex-col gap-2 items-end flex-shrink-0">
+          <span className={`badge ${priorityInfo.class} text-xs whitespace-nowrap`}>
             {priorityInfo.icon} {PRIORITY_LABELS[complaint.priority]}
           </span>
         </div>
       </div>
 
-      {/* Description */}
-      <p className="text-gray-700 mb-3 text-sm line-clamp-3">{complaint.description}</p>
+      {/* Description - Fixed height */}
+      <p className="text-gray-700 mb-3 text-sm line-clamp-3 h-16">{complaint.description}</p>
 
       {/* Location */}
       {complaint.location && (
@@ -104,8 +104,8 @@ export default function ComplaintCard({ complaint, onEdit, onDelete }: Complaint
         <span>Reported: {formatDate(complaint.created_at)}</span>
       </div>
 
-      {/* Actions */}
-      <div className="flex flex-wrap gap-2">
+      {/* Actions - Push to bottom */}
+      <div className="flex flex-wrap gap-2 mt-auto">
         <button
           onClick={() => onEdit(complaint)}
           className="flex-1 px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors duration-200 font-medium"
@@ -119,7 +119,7 @@ export default function ComplaintCard({ complaint, onEdit, onDelete }: Complaint
               onDelete(complaint.id);
             }
           }}
-          className="flex-1 px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 font-medium"
+          className="flex-1 px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-2 font-medium"
         >
           Delete
         </button>
