@@ -110,7 +110,9 @@ export const complaintApi = {
    * Get districts for a division
    */
   getDistricts: async (division: string): Promise<string[]> => {
-    const response = await api.get<{ districts: string[] }>(`/api/locations/districts?division=${division}`);
+    const response = await api.get<{ districts: string[] }>('/api/locations/districts', {
+      params: { division }
+    });
     return response.data.districts;
   },
 
@@ -118,9 +120,9 @@ export const complaintApi = {
    * Get upazilas for a division and district
    */
   getUpazilas: async (division: string, district: string): Promise<string[]> => {
-    const response = await api.get<{ upazilas: string[] }>(
-      `/api/locations/upazilas?division=${division}&district=${district}`
-    );
+    const response = await api.get<{ upazilas: string[] }>('/api/locations/upazilas', {
+      params: { division, district }
+    });
     return response.data.upazilas;
   },
 
