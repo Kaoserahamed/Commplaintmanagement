@@ -40,6 +40,9 @@ deployment-info.json
 *.pem
 *.key
 *.crt
+CREDENTIALS.txt
+SECRETS_AND_SETUP.md
+azure-creds-temp.json
 
 # IDE
 .vscode/
