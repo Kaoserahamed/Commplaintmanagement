@@ -1,7 +1,7 @@
 /**
  * ComplaintCard component - Displays a single complaint with media
  */
-import type { Complaint, ComplaintStatus, ComplaintPriority } from '../types';
+import type { Complaint } from '../types';
 import { CATEGORY_LABELS, STATUS_LABELS, PRIORITY_LABELS } from '../types';
 import { complaintApi } from '../services/api';
 
@@ -36,7 +36,7 @@ const categoryIcons: Record<string, string> = {
   other: '📋',
 };
 
-export default function ComplaintCard({ complaint, onEdit, onDelete, onStatusChange }: ComplaintCardProps) {
+export default function ComplaintCard({ complaint, onEdit, onDelete }: ComplaintCardProps) {
   const statusInfo = statusConfig[complaint.status];
   const priorityInfo = priorityConfig[complaint.priority];
   const categoryIcon = categoryIcons[complaint.category] || '📋';

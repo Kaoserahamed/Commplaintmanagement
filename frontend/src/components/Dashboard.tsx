@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { complaintApi } from '../services/api';
 import type { DashboardStats } from '../types';
-import { CATEGORY_LABELS, STATUS_LABELS, PRIORITY_LABELS } from '../types';
+import { CATEGORY_LABELS, PRIORITY_LABELS } from '../types';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
