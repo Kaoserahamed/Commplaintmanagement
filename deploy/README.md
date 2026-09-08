@@ -1,308 +1,284 @@
-# Azure Deployment Scripts
+# Deployment Guide
 
-This directory contains PowerShell scripts for deploying and managing TaskCloud on Microsoft Azure.
+## Azure Deployment with CI/CD
 
-## Prerequisites
+### Prerequisites
+- Azure CLI installed and logged in
+- GitHub account with repository access
+- Azure subscription (Azure for Students works)
 
-1. **Azure CLI** - Install from [aka.ms/installazurecliwindows](https://aka.ms/installazurecliwindows)
-2. **Azure Subscription** - Active subscription with permission to create resources
-3. **Docker** - For local testing (optional)
-4. **PowerShell** - Windows PowerShell 5.1 or PowerShell 7+
+### 1. Initial Setup (One-time)
 
-## Scripts Overview
-
-### `deploy.ps1` - Initial Deployment
-
-Deploys the complete TaskCloud application to Azure including:
-- Resource Group
-- Azure Container Registry
-- PostgreSQL Flexible Server
-- App Service Plan (Linux B1)
-- Backend Web App (FastAPI)
-- Frontend Web App (React)
-
-**Usage:**
+Run the deployment script to create all Azure resources:
 
 ```powershell
-# Basic deployment with default settings
-.\deploy\deploy.ps1
-
-# Custom deployment
-.\deploy\deploy.ps1 -ResourceGroup "my-taskcloud-rg" -Location "westus" -AppName "my-taskcloud"
+cd deploy
+.\deploy-azure.ps1
 ```
 
-**Parameters:**
-- `ResourceGroup` - Azure resource group name (default: "taskcloud-rg")
-- `Location` - Azure region (default: "eastus")
-- `AppName` - Base name for all resources (default: "taskcloud-{random}")
+This creates:
+- Resource Group: `complaint-system`
+- Container Registry: `complaint2292acr`
+- PostgreSQL Database: `complaint2292-db`
+- App Service Plan: `complaint2292-plan`
+- Backend App: `complaint2292-api`
+- Frontend App: `complaint2292-web`
 
-**Output:**
-- Creates `deployment-info.json` with all deployment details
-- Displays application URLs and credentials
+**Important**: Save the database password displayed at the end!
 
-**Duration:** ~10-15 minutes
+### 2. Configure GitHub Actions (CI/CD)
 
-### `update.ps1` - Update Deployment
+#### Create Azure Service Principal
 
-Rebuilds and redeploys containers without recreating infrastructure.
+```bash
+az ad sp create-for-rbac \
+  --name "complaint-system-deploy" \
+  --role contributor \
+  --scopes /subscriptions/{SUBSCRIPTION_ID}/resourceGroups/complaint-system \
+  --sdk-auth
+```
 
-**Usage:**
+Replace `{SUBSCRIPTION_ID}` with your Azure subscription ID:
+```bash
+az account show --query id -o tsv
+```
+
+#### Add GitHub Secret
+
+1. Go to your GitHub repository
+2. Settings → Secrets and variables → Actions
+3. Click "New repository secret"
+4. Name: `AZURE_CREDENTIALS`
+5. Value: Paste the entire JSON output from the service principal command
+6. Click "Add secret"
+
+### 3. Configure Azure App Services
+
+#### Backend Configuration
+
+```bash
+# Set environment variables
+az webapp config appsettings set \
+  --name complaint2292-api \
+  --resource-group complaint-system \
+  --settings \
+    DATABASE_URL="postgresql://complainadmin:YOUR_PASSWORD@complaint2292-db.postgres.database.azure.com:5432/complaints?sslmode=require" \
+    CORS_ORIGINS="https://complaint2292-web.azurewebsites.net" \
+    DEBUG="False" \
+    WEBSITES_PORT="8000"
+```
+
+#### Frontend Configuration
+
+```bash
+# Frontend is configured at build time with VITE_API_URL
+# No additional settings needed after deployment
+```
+
+### 4. Deploy
+
+Push to `main` branch:
+
+```bash
+git add .
+git commit -m "Your changes"
+git push origin main
+```
+
+GitHub Actions will automatically:
+1. Build backend Docker image
+2. Push to Azure Container Registry
+3. Restart backend webapp
+4. Build frontend Docker image with API URL
+5. Push to Azure Container Registry
+6. Restart frontend webapp
+
+Monitor deployment in GitHub Actions tab.
+
+### 5. Verify Deployment
+
+```bash
+# Check backend health
+curl https://complaint2292-api.azurewebsites.net/health
+
+# Check frontend (in browser)
+# Visit: https://complaint2292-web.azurewebsites.net
+```
+
+## Manual Deployment (Without CI/CD)
+
+If you prefer manual deployment:
+
+```bash
+# Build and push backend
+cd backend
+az acr build \
+  --registry complaint2292acr \
+  --image complaint-backend:latest \
+  --file Dockerfile \
+  .
+
+# Restart backend
+az webapp restart \
+  --name complaint2292-api \
+  --resource-group complaint-system
+
+# Build and push frontend
+cd ../frontend
+az acr build \
+  --registry complaint2292acr \
+  --image complaint-frontend:latest \
+  --file Dockerfile \
+  --build-arg VITE_API_URL=https://complaint2292-api.azurewebsites.net \
+  .
+
+# Restart frontend
+az webapp restart \
+  --name complaint2292-web \
+  --resource-group complaint-system
+```
+
+## Updating Environment Variables
+
+### Azure Portal Method
+1. Go to Azure Portal
+2. Navigate to App Service (complaint2292-api or complaint2292-web)
+3. Settings → Configuration
+4. Add/modify Application settings
+5. Click "Save"
+6. Restart the app
+
+### CLI Method
+
+```bash
+# Update backend settings
+az webapp config appsettings set \
+  --name complaint2292-api \
+  --resource-group complaint-system \
+  --settings KEY=VALUE
+
+# Update frontend settings
+az webapp config appsettings set \
+  --name complaint2292-web \
+  --resource-group complaint-system \
+  --settings KEY=VALUE
+```
+
+## Monitoring & Logs
+
+### View Live Logs
 
 ```powershell
-# Update both frontend and backend
-.\deploy\update.ps1
+# Backend logs
+az webapp log tail \
+  --name complaint2292-api \
+  --resource-group complaint-system
 
-# Use custom config file
-.\deploy\update.ps1 -ConfigFile "my-deployment-info.json"
+# Frontend logs
+az webapp log tail \
+  --name complaint2292-web \
+  --resource-group complaint-system
 ```
 
-**Duration:** ~5-7 minutes
+### Check App Status
 
-### `status.ps1` - Check Status
-
-Checks the health and status of all deployed resources.
-
-**Usage:**
-
-```powershell
-.\deploy\status.ps1
+```bash
+az webapp show \
+  --name complaint2292-api \
+  --resource-group complaint-system \
+  --query "{Name:name, State:state, URL:defaultHostName}"
 ```
 
-**Checks:**
-- Resource Group existence
-- Database server state
-- Container Registry status
-- Backend and Frontend availability
-- Health endpoint responses
+## Troubleshooting
 
-### `logs.ps1` - View Logs
+### Backend 503 Error
+```bash
+# Check logs
+az webapp log tail --name complaint2292-api --resource-group complaint-system
 
-Downloads or streams application logs.
+# Verify database connection
+# Check DATABASE_URL in app settings
 
-**Usage:**
-
-```powershell
-# Download logs for both services
-.\deploy\logs.ps1
-
-# Stream backend logs (live)
-.\deploy\logs.ps1 -Service backend -Follow
-
-# Download frontend logs only
-.\deploy\logs.ps1 -Service frontend
+# Restart app
+az webapp restart --name complaint2292-api --resource-group complaint-system
 ```
 
-**Parameters:**
-- `Service` - Which service logs to view: "backend", "frontend", or "both" (default)
-- `Follow` - Stream logs in real-time (like tail -f)
+### Frontend 503 Error
+```bash
+# Check if container image exists
+az acr repository show-tags \
+  --name complaint2292acr \
+  --repository complaint-frontend
 
-### `cleanup.ps1` - Delete Resources
+# Check container configuration
+az webapp config container show \
+  --name complaint2292-web \
+  --resource-group complaint-system
 
-Deletes all Azure resources to avoid ongoing charges.
-
-**Usage:**
-
-```powershell
-# Interactive cleanup (requires confirmation)
-.\deploy\cleanup.ps1
-
-# Force cleanup without confirmation
-.\deploy\cleanup.ps1 -Force
+# Restart app
+az webapp restart --name complaint2292-web --resource-group complaint-system
 ```
 
-**Warning:** This permanently deletes all resources and data!
+### Database Connection Issues
+```bash
+# Test database connectivity
+az postgres flexible-server connect \
+  --name complaint2292-db \
+  --admin-user complainadmin \
+  --database-name complaints
 
-## Deployment Workflow
-
-### First-Time Deployment
-
-1. **Login to Azure:**
-   ```powershell
-   az login
-   ```
-
-2. **Run deployment:**
-   ```powershell
-   .\deploy\deploy.ps1
-   ```
-
-3. **Save the output:**
-   - Frontend URL
-   - Backend URL
-   - Database password (from `deployment-info.json`)
-
-4. **Verify deployment:**
-   ```powershell
-   .\deploy\status.ps1
-   ```
-
-### Making Updates
-
-1. **Make code changes** to backend or frontend
-
-2. **Redeploy:**
-   ```powershell
-   .\deploy\update.ps1
-   ```
-
-3. **Wait 1-2 minutes** for changes to go live
-
-### Troubleshooting
-
-1. **Check status:**
-   ```powershell
-   .\deploy\status.ps1
-   ```
-
-2. **View logs:**
-   ```powershell
-   .\deploy\logs.ps1 -Service backend -Follow
-   ```
-
-3. **Check in Azure Portal:**
-   - Go to https://portal.azure.com
-   - Navigate to your resource group
-   - Check App Service logs and metrics
-
-### Cleanup After Demo
-
-```powershell
-.\deploy\cleanup.ps1
+# Check firewall rules
+az postgres flexible-server firewall-rule list \
+  --name complaint2292-db \
+  --resource-group complaint-system
 ```
 
-## Cost Management
+## Cleanup (Delete All Resources)
 
-**Estimated Monthly Costs:**
-- App Service Plan (B1): ~$13/month
-- PostgreSQL (B1ms): ~$26/month  
-- Container Registry (Basic): ~$5/month
-- **Total: ~$44/month**
-
-**To minimize costs:**
-1. Use the Free Tier PostgreSQL if available in your region
-2. Stop App Services when not in use:
-   ```powershell
-   az webapp stop --name {app-name} --resource-group {rg}
-   ```
-3. Delete resources immediately after demo:
-   ```powershell
-   .\deploy\cleanup.ps1
-   ```
-
-## Configuration File
-
-The `deployment-info.json` file contains:
-
-```json
-{
-  "resourceGroup": "taskcloud-rg",
-  "location": "eastus",
-  "appName": "taskcloud-1234",
-  "frontendUrl": "https://taskcloud-1234-frontend.azurewebsites.net",
-  "backendUrl": "https://taskcloud-1234-backend.azurewebsites.net",
-  "dbServer": "taskcloud-1234-dbserver",
-  "dbName": "taskcloud",
-  "dbAdmin": "taskcloudadmin",
-  "dbPassword": "GeneratedPassword123!",
-  "acrName": "taskcloud1234acr",
-  "deploymentDate": "2024-01-15 10:30:00"
-}
+```bash
+# Delete entire resource group (CAUTION!)
+az group delete \
+  --name complaint-system \
+  --yes \
+  --no-wait
 ```
 
-**Important:** Keep this file secure! It contains database credentials.
+## Cost Optimization
 
-## Azure Resources Created
+Current configuration uses:
+- **App Service Plan**: B1 (Basic tier) - ~$13/month
+- **PostgreSQL**: Burstable B1ms - ~$12/month
+- **Container Registry**: Basic - ~$5/month
 
-1. **Resource Group** - Container for all resources
-2. **Container Registry** - Stores Docker images
-3. **PostgreSQL Flexible Server** - Database with SSL enabled
-4. **App Service Plan** - Linux B1 tier for hosting
-5. **Backend Web App** - FastAPI container
-6. **Frontend Web App** - React/Nginx container
+**Total**: ~$30/month
 
-## Security Features
+To reduce costs:
+1. Use Free tier App Service (limited hours)
+2. Stop services when not in use
+3. Use shared database for multiple apps
 
-- HTTPS enforced on all endpoints
-- PostgreSQL with SSL required
-- Container images in private registry
-- Firewall rules configured
-- Admin credentials auto-generated
+## Security Checklist
 
-## Common Issues
-
-### Issue: "Resource provider not registered"
-
-**Solution:**
-```powershell
-az provider register --namespace Microsoft.DBforPostgreSQL
-az provider register --namespace Microsoft.ContainerRegistry
-```
-
-### Issue: "Name already exists"
-
-**Solution:** Use a different AppName:
-```powershell
-.\deploy\deploy.ps1 -AppName "taskcloud-$(Get-Random)"
-```
-
-### Issue: "Quota exceeded"
-
-**Solution:** Choose a different region or check your subscription limits:
-```powershell
-az vm list-usage --location eastus --output table
-```
-
-### Issue: Apps not responding
-
-**Solutions:**
-1. Check if apps are running: `.\deploy\status.ps1`
-2. View logs: `.\deploy\logs.ps1 -Follow`
-3. Restart apps:
-   ```powershell
-   az webapp restart --name {app-name} --resource-group {rg}
-   ```
-
-## Additional Commands
-
-### Connect to Database
-
-```powershell
-# Install PostgreSQL client if needed
-# Then connect using info from deployment-info.json
-
-$config = Get-Content deployment-info.json | ConvertFrom-Json
-psql "postgresql://$($config.dbAdmin):$($config.dbPassword)@$($config.dbServer).postgres.database.azure.com:5432/$($config.dbName)?sslmode=require"
-```
-
-### Scale App Service
-
-```powershell
-# Scale to S1 tier (more resources)
-az appservice plan update --name taskcloud-1234-plan --resource-group taskcloud-rg --sku S1
-
-# Scale to Free tier (limited)
-az appservice plan update --name taskcloud-1234-plan --resource-group taskcloud-rg --sku F1
-```
-
-### Enable Diagnostic Logs
-
-```powershell
-az webapp log config --name {app-name} --resource-group {rg} --docker-container-logging filesystem
-```
+- [x] No hardcoded credentials
+- [x] Environment variables for secrets
+- [x] PostgreSQL SSL enforced
+- [x] CORS configured
+- [x] GitHub secrets for CI/CD
+- [x] Container registry authentication
+- [x] File upload size limits
+- [x] Input validation
 
 ## Support
 
-For issues:
-1. Check Azure Portal for detailed error messages
-2. Review logs with `logs.ps1`
-3. Verify configuration with `status.ps1`
-4. Check Azure service health: https://status.azure.com/
+For issues or questions:
+- Check logs: `az webapp log tail`
+- Review GitHub Actions workflow runs
+- Verify environment variables
+- Check Azure resource status in portal
 
-## Next Steps
+---
 
-After successful deployment:
-1. Test all CRUD operations
-2. Configure custom domain (optional)
-3. Set up Application Insights for monitoring
-4. Configure automated backups
-5. Implement CI/CD pipeline with GitHub Actions
+**Quick Links:**
+- Frontend: https://complaint2292-web.azurewebsites.net
+- Backend API: https://complaint2292-api.azurewebsites.net
+- API Docs: https://complaint2292-api.azurewebsites.net/docs

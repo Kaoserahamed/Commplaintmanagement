@@ -1,0 +1,74 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AZURE_RESOURCE_GROUP: complaint-system
+  AZURE_LOCATION: southeastasia
+  ACR_NAME: complaint2292acr
+  BACKEND_APP_NAME: complaint2292-api
+  FRONTEND_APP_NAME: complaint2292-web
+
+jobs:
+  build-and-deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and push backend to ACR
+        run: |
+          az acr build \
+            --registry ${{ env.ACR_NAME }} \
+            --image complaint-backend:${{ github.sha }} \
+            --image complaint-backend:latest \
+            --file backend/Dockerfile \
+            backend/
+
+      - name: Restart backend webapp
+        run: |
+          az webapp restart \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+
+  build-and-deploy-frontend:
+    runs-on: ubuntu-latest
+    needs: build-and-deploy-backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and push frontend to ACR
+        run: |
+          az acr build \
+            --registry ${{ env.ACR_NAME }} \
+            --image complaint-frontend:${{ github.sha }} \
+            --image complaint-frontend:latest \
+            --file frontend/Dockerfile \
+            --build-arg VITE_API_URL=https://${{ env.BACKEND_APP_NAME }}.azurewebsites.net \
+            frontend/
+
+      - name: Restart frontend webapp
+        run: |
+          az webapp restart \
+            --name ${{ env.FRONTEND_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+
+      - name: Deployment Summary
+        run: |
+          echo "✅ Deployment successful!"
+          echo "🌐 Frontend: https://${{ env.FRONTEND_APP_NAME }}.azurewebsites.net"
+          echo "🔧 Backend API: https://${{ env.BACKEND_APP_NAME }}.azurewebsites.net"

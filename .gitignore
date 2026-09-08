@@ -32,10 +32,14 @@ yarn-error.log*
 dist/
 build/
 
-# Environment variables
+# Environment variables & Secrets
 .env
 .env.local
 .env.production
+deployment-info.json
+*.pem
+*.key
+*.crt
 
 # IDE
 .vscode/
@@ -61,3 +65,7 @@ docker-compose.override.yml
 
 # Azure
 .azure/
+
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
