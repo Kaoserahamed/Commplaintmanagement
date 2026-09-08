@@ -76,14 +76,8 @@ class ComplaintResponse(ComplaintBase):
 class DashboardStats(BaseModel):
     """Schema for dashboard statistics."""
     total_complaints: int
-    pending: int
-    in_review: int
-    in_progress: int
-    resolved: int
-    rejected: int
     by_category: dict[str, int]
     by_priority: dict[str, int]
-    recent_complaints: list[ComplaintResponse]
 
 
 class HealthResponse(BaseModel):

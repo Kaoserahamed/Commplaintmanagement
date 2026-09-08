@@ -2,7 +2,7 @@
  * ComplaintCard component - Displays a single complaint with media
  */
 import type { Complaint } from '../types';
-import { CATEGORY_LABELS, STATUS_LABELS, PRIORITY_LABELS } from '../types';
+import { CATEGORY_LABELS, PRIORITY_LABELS } from '../types';
 import { complaintApi } from '../services/api';
 
 interface ComplaintCardProps {
@@ -10,14 +10,6 @@ interface ComplaintCardProps {
   onEdit: (complaint: Complaint) => void;
   onDelete: (id: number) => void;
 }
-
-const statusConfig = {
-  pending: { class: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-  in_review: { class: 'bg-blue-100 text-blue-800 border-blue-300' },
-  in_progress: { class: 'bg-purple-100 text-purple-800 border-purple-300' },
-  resolved: { class: 'bg-green-100 text-green-800 border-green-300' },
-  rejected: { class: 'bg-red-100 text-red-800 border-red-300' },
-};
 
 const priorityConfig = {
   low: { class: 'bg-gray-100 text-gray-700', icon: '🔵' },
@@ -37,7 +29,6 @@ const categoryIcons: Record<string, string> = {
 };
 
 export default function ComplaintCard({ complaint, onEdit, onDelete }: ComplaintCardProps) {
-  const statusInfo = statusConfig[complaint.status];
   const priorityInfo = priorityConfig[complaint.priority];
   const categoryIcon = categoryIcons[complaint.category] || '📋';
 
@@ -70,9 +61,6 @@ export default function ComplaintCard({ complaint, onEdit, onDelete }: Complaint
         <div className="flex flex-col gap-2 items-end">
           <span className={`badge ${priorityInfo.class} text-xs`}>
             {priorityInfo.icon} {PRIORITY_LABELS[complaint.priority]}
-          </span>
-          <span className={`badge ${statusInfo.class} text-xs border`}>
-            {STATUS_LABELS[complaint.status]}
           </span>
         </div>
       </div>

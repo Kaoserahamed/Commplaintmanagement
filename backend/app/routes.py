@@ -17,7 +17,6 @@ def get_complaints(
     skip: int = 0,
     limit: int = 100,
     category: schemas.ComplaintCategory | None = None,
-    status: schemas.ComplaintStatus | None = None,
     priority: schemas.ComplaintPriority | None = None,
     db: Session = Depends(get_db)
 ):
@@ -27,16 +26,12 @@ def get_complaints(
     - **skip**: Number of records to skip (default: 0)
     - **limit**: Maximum number of records to return (default: 100)
     - **category**: Filter by complaint category (optional)
-    - **status**: Filter by complaint status (optional)
     - **priority**: Filter by complaint priority (optional)
     """
     query = db.query(models.Complaint)
     
     if category:
         query = query.filter(models.Complaint.category == models.ComplaintCategory[category.name])
-    
-    if status:
-        query = query.filter(models.Complaint.status == models.ComplaintStatus[status.name])
     
     if priority:
         query = query.filter(models.Complaint.priority == models.ComplaintPriority[priority.name])
@@ -189,31 +184,10 @@ async def upload_complaint_media(
 @router.get("/dashboard/stats", response_model=schemas.DashboardStats)
 def get_dashboard_stats(db: Session = Depends(get_db)):
     """
-    Get dashboard statistics including counts by status, category, and priority.
+    Get dashboard statistics including counts by category and priority.
     """
     # Total counts
     total = db.query(func.count(models.Complaint.id)).scalar()
-    
-    # Status counts
-    pending = db.query(func.count(models.Complaint.id)).filter(
-        models.Complaint.status == models.ComplaintStatus.PENDING
-    ).scalar()
-    
-    in_review = db.query(func.count(models.Complaint.id)).filter(
-        models.Complaint.status == models.ComplaintStatus.IN_REVIEW
-    ).scalar()
-    
-    in_progress = db.query(func.count(models.Complaint.id)).filter(
-        models.Complaint.status == models.ComplaintStatus.IN_PROGRESS
-    ).scalar()
-    
-    resolved = db.query(func.count(models.Complaint.id)).filter(
-        models.Complaint.status == models.ComplaintStatus.RESOLVED
-    ).scalar()
-    
-    rejected = db.query(func.count(models.Complaint.id)).filter(
-        models.Complaint.status == models.ComplaintStatus.REJECTED
-    ).scalar()
     
     # Category counts
     by_category = {}
@@ -231,21 +205,10 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         ).scalar()
         by_priority[priority.value] = count
     
-    # Recent complaints (last 5)
-    recent = db.query(models.Complaint).order_by(
-        models.Complaint.created_at.desc()
-    ).limit(5).all()
-    
     return {
         "total_complaints": total,
-        "pending": pending,
-        "in_review": in_review,
-        "in_progress": in_progress,
-        "resolved": resolved,
-        "rejected": rejected,
         "by_category": by_category,
-        "by_priority": by_priority,
-        "recent_complaints": recent
+        "by_priority": by_priority
     }
 
 

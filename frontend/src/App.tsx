@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { complaintApi } from './services/api';
 import type { Complaint, ComplaintCreate } from './types';
 import Header from './components/Header';
-import Dashboard from './components/Dashboard';
 import FilterBar from './components/FilterBar';
 import ComplaintCard from './components/ComplaintCard';
 import ComplaintForm from './components/ComplaintForm';
@@ -21,7 +20,6 @@ function App() {
   
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
 
   // Fetch complaints on mount
@@ -32,7 +30,7 @@ function App() {
   // Apply filters when they change
   useEffect(() => {
     applyFilters();
-  }, [allComplaints, categoryFilter, statusFilter, priorityFilter]);
+  }, [allComplaints, categoryFilter, priorityFilter]);
 
   const fetchComplaints = async () => {
     try {
@@ -53,10 +51,6 @@ function App() {
 
     if (categoryFilter !== 'all') {
       filtered = filtered.filter((c) => c.category === categoryFilter);
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((c) => c.status === statusFilter);
     }
 
     if (priorityFilter !== 'all') {
@@ -146,17 +140,12 @@ function App() {
     <div className="min-h-screen bg-gray-50">
       <Header onCreateComplaint={() => setShowForm(true)} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Dashboard Statistics */}
-        <Dashboard />
-
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Filters */}
         <FilterBar
           categoryFilter={categoryFilter}
-          statusFilter={statusFilter}
           priorityFilter={priorityFilter}
           onCategoryChange={setCategoryFilter}
-          onStatusChange={setStatusFilter}
           onPriorityChange={setPriorityFilter}
           complaintCounts={complaintCounts}
         />
