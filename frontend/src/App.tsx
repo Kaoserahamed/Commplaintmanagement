@@ -21,6 +21,9 @@ function App() {
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [divisionFilter, setDivisionFilter] = useState('');
+  const [districtFilter, setDistrictFilter] = useState('');
+  const [upazilaFilter, setUpazilaFilter] = useState('');
 
   // Fetch complaints on mount
   useEffect(() => {
@@ -30,7 +33,7 @@ function App() {
   // Apply filters when they change
   useEffect(() => {
     applyFilters();
-  }, [allComplaints, categoryFilter, statusFilter]);
+  }, [allComplaints, categoryFilter, statusFilter, divisionFilter, districtFilter, upazilaFilter]);
 
   const fetchComplaints = async () => {
     try {
@@ -57,7 +60,26 @@ function App() {
       filtered = filtered.filter((c) => c.status === statusFilter);
     }
 
+    // Location filters
+    if (divisionFilter) {
+      filtered = filtered.filter((c) => c.division === divisionFilter);
+    }
+
+    if (districtFilter) {
+      filtered = filtered.filter((c) => c.district === districtFilter);
+    }
+
+    if (upazilaFilter) {
+      filtered = filtered.filter((c) => c.upazila === upazilaFilter);
+    }
+
     setComplaints(filtered);
+  };
+
+  const handleLocationChange = (division: string, district: string, upazila: string) => {
+    setDivisionFilter(division);
+    setDistrictFilter(district);
+    setUpazilaFilter(upazila);
   };
 
   const handleCreateComplaint = async (complaintData: ComplaintCreate, mediaFile?: File) => {
@@ -109,6 +131,7 @@ function App() {
           statusFilter={statusFilter}
           onCategoryChange={setCategoryFilter}
           onStatusChange={setStatusFilter}
+          onLocationChange={handleLocationChange}
           complaintCounts={complaintCounts}
         />
 
