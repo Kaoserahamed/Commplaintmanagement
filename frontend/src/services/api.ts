@@ -2,7 +2,7 @@
  * API service for Complaint Management System backend communication
  */
 import axios from 'axios';
-import type { Complaint, ComplaintCreate, ComplaintUpdate, DashboardStats, MediaUploadResponse } from '../types';
+import type { Complaint, ComplaintCreate, DashboardStats, MediaUploadResponse } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -69,21 +69,6 @@ export const complaintApi = {
   createComplaint: async (complaint: ComplaintCreate): Promise<Complaint> => {
     const response = await api.post<Complaint>('/api/complaints', complaint);
     return response.data;
-  },
-
-  /**
-   * Update an existing complaint
-   */
-  updateComplaint: async (id: number, complaint: ComplaintUpdate): Promise<Complaint> => {
-    const response = await api.put<Complaint>(`/api/complaints/${id}`, complaint);
-    return response.data;
-  },
-
-  /**
-   * Delete a complaint
-   */
-  deleteComplaint: async (id: number): Promise<void> => {
-    await api.delete(`/api/complaints/${id}`);
   },
 
   /**
