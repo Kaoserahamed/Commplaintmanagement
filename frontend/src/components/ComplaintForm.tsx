@@ -1,45 +1,118 @@
 /**
- * ComplaintForm component - Create/Edit complaint form with media upload
+ * ComplaintForm component - Bangladesh Civic Complaint Submission
  */
 import { useState, useEffect, useRef } from 'react';
-import type { Complaint, ComplaintCreate, ComplaintCategory, ComplaintPriority } from '../types';
-import { CATEGORY_LABELS, PRIORITY_LABELS } from '../types';
+import type { ComplaintCreate, ComplaintCategory, UpazilaAvailability } from '../types';
+import { CATEGORY_LABELS } from '../types';
+import { complaintApi } from '../services/api';
 
 interface ComplaintFormProps {
-  complaint?: Complaint | null;
   onSubmit: (complaint: ComplaintCreate, mediaFile?: File) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
 
-export default function ComplaintForm({ complaint, onSubmit, onCancel, isSubmitting }: ComplaintFormProps) {
+export default function ComplaintForm({ onSubmit, onCancel, isSubmitting }: ComplaintFormProps) {
+  // Form fields
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [category, setCategory] = useState<ComplaintCategory>('other');
-  const [priority, setPriority] = useState<ComplaintPriority>('medium');
-  const [location, setLocation] = useState('');
+  const [division, setDivision] = useState('');
+  const [district, setDistrict] = useState('');
+  const [upazila, setUpazila] = useState('');
+  const [localArea, setLocalArea] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [description, setDescription] = useState('');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  
+  // Location data from API
+  const [divisions, setDivisions] = useState<string[]>([]);
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [upazilas, setUpazilas] = useState<string[]>([]);
+  
+  // Upazila availability check
+  const [availability, setAvailability] = useState<UpazilaAvailability | null>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Load divisions on mount
   useEffect(() => {
-    if (complaint) {
-      setTitle(complaint.title);
-      setDescription(complaint.description);
-      setCategory(complaint.category);
-      setPriority(complaint.priority);
-      setLocation(complaint.location || '');
-      setMediaPreview(complaint.media_url);
+    loadDivisions();
+  }, []);
+
+  // Load districts when division changes
+  useEffect(() => {
+    if (division) {
+      loadDistricts(division);
+      setDistrict('');
+      setUpazila('');
+      setAvailability(null);
     } else {
-      setTitle('');
-      setDescription('');
-      setCategory('other');
-      setPriority('medium');
-      setLocation('');
-      setMediaFile(null);
-      setMediaPreview(null);
+      setDistricts([]);
+      setUpazilas([]);
     }
-  }, [complaint]);
+  }, [division]);
+
+  // Load upazilas when district changes
+  useEffect(() => {
+    if (division && district) {
+      loadUpazilas(division, district);
+      setUpazila('');
+      setAvailability(null);
+    } else {
+      setUpazilas([]);
+    }
+  }, [district, division]);
+
+  // Check availability when upazila is selected
+  useEffect(() => {
+    if (division && district && upazila) {
+      checkUpazilaAvailability(division, district, upazila);
+    } else {
+      setAvailability(null);
+    }
+  }, [upazila]);
+
+  const loadDivisions = async () => {
+    try {
+      const data = await complaintApi.getDivisions();
+      setDivisions(data);
+    } catch (error) {
+      console.error('Failed to load divisions:', error);
+    }
+  };
+
+  const loadDistricts = async (selectedDivision: string) => {
+    try {
+      const data = await complaintApi.getDistricts(selectedDivision);
+      setDistricts(data);
+    } catch (error) {
+      console.error('Failed to load districts:', error);
+    }
+  };
+
+  const loadUpazilas = async (selectedDivision: string, selectedDistrict: string) => {
+    try {
+      const data = await complaintApi.getUpazilas(selectedDivision, selectedDistrict);
+      setUpazilas(data);
+    } catch (error) {
+      console.error('Failed to load upazilas:', error);
+    }
+  };
+
+  const checkUpazilaAvailability = async (div: string, dist: string, upz: string) => {
+    setCheckingAvailability(true);
+    try {
+      const data = await complaintApi.checkUpazilaAvailability(div, dist, upz);
+      setAvailability(data);
+    } catch (error) {
+      console.error('Failed to check availability:', error);
+      setAvailability(null);
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,14 +153,23 @@ export default function ComplaintForm({ complaint, onSubmit, onCancel, isSubmitt
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if upazila is available
+    if (!availability?.available) {
+      alert('Please select an available upazila/thana before submitting.');
+      return;
+    }
+    
     if (title.trim() && description.trim().length >= 10) {
       onSubmit(
         {
           title: title.trim(),
-          description: description.trim(),
           category,
-          priority,
-          location: location.trim() || undefined,
+          division,
+          district,
+          upazila,
+          local_area: localArea.trim(),
+          phone_number: phoneNumber.trim(),
+          description: description.trim(),
         },
         mediaFile || undefined
       );
@@ -100,12 +182,15 @@ export default function ComplaintForm({ complaint, onSubmit, onCancel, isSubmitt
            mediaFile?.type.startsWith('video/');
   };
 
+  const canSubmit = availability?.available && title.trim() && description.trim().length >= 10 && 
+                    division && district && upazila && localArea.trim() && phoneNumber.trim();
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full my-8">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            {complaint ? 'Edit Complaint' : 'Report New Complaint'}
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 sticky top-0 bg-white pb-2 border-b">
+            Report New Complaint
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -127,44 +212,149 @@ export default function ComplaintForm({ complaint, onSubmit, onCancel, isSubmitt
               />
             </div>
 
-            {/* Category and Priority */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as ComplaintCategory)}
-                  className="input-field"
-                  required
-                >
-                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+            {/* Category */}
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value as ComplaintCategory)}
+                className="input-field"
+                required
+              >
+                {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Location Hierarchy - Division, District, Upazila */}
+            <div className="space-y-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <h3 className="font-medium text-gray-900">Location <span className="text-red-500">*</span></h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Division */}
+                <div>
+                  <label htmlFor="division" className="block text-sm font-medium text-gray-700 mb-1">
+                    Division
+                  </label>
+                  <select
+                    id="division"
+                    value={division}
+                    onChange={(e) => setDivision(e.target.value)}
+                    className="input-field"
+                    required
+                  >
+                    <option value="">Select Division</option>
+                    {divisions.map((div) => (
+                      <option key={div} value={div}>
+                        {div}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* District */}
+                <div>
+                  <label htmlFor="district" className="block text-sm font-medium text-gray-700 mb-1">
+                    District
+                  </label>
+                  <select
+                    id="district"
+                    value={district}
+                    onChange={(e) => setDistrict(e.target.value)}
+                    className="input-field"
+                    required
+                    disabled={!division}
+                  >
+                    <option value="">Select District</option>
+                    {districts.map((dist) => (
+                      <option key={dist} value={dist}>
+                        {dist}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Upazila/Thana */}
+                <div>
+                  <label htmlFor="upazila" className="block text-sm font-medium text-gray-700 mb-1">
+                    Upazila/Thana
+                  </label>
+                  <select
+                    id="upazila"
+                    value={upazila}
+                    onChange={(e) => setUpazila(e.target.value)}
+                    className="input-field"
+                    required
+                    disabled={!district}
+                  >
+                    <option value="">Select Upazila</option>
+                    {upazilas.map((upz) => (
+                      <option key={upz} value={upz}>
+                        {upz}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
-                  Priority
-                </label>
-                <select
-                  id="priority"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as ComplaintPriority)}
-                  className="input-field"
-                >
-                  {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Availability Status */}
+              {checkingAvailability && (
+                <div className="flex items-center text-sm text-gray-600">
+                  <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Checking availability...
+                </div>
+              )}
+              {availability && !checkingAvailability && (
+                <div className={`p-3 rounded-md ${availability.available ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+                  <p className={`text-sm ${availability.available ? 'text-green-800' : 'text-yellow-800'}`}>
+                    {availability.available ? '✓ ' : '⚠️ '}
+                    {availability.message}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Specific Location */}
+            <div>
+              <label htmlFor="localArea" className="block text-sm font-medium text-gray-700 mb-2">
+                Specific Location/Address <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="localArea"
+                value={localArea}
+                onChange={(e) => setLocalArea(e.target.value)}
+                className="input-field"
+                placeholder="e.g., Near City Hall, Main Road"
+                required
+                maxLength={200}
+              />
+            </div>
+
+            {/* Phone Number */}
+            <div>
+              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                Contact Phone Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                id="phoneNumber"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="input-field"
+                placeholder="01XXXXXXXXX"
+                required
+                maxLength={20}
+              />
             </div>
 
             {/* Description */}
@@ -187,26 +377,10 @@ export default function ComplaintForm({ complaint, onSubmit, onCancel, isSubmitt
               </p>
             </div>
 
-            {/* Location */}
-            <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                Location
-              </label>
-              <input
-                type="text"
-                id="location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="input-field"
-                placeholder="e.g., Main Street near City Hall, Ward 5"
-                maxLength={500}
-              />
-            </div>
-
-            {/* Media Upload */}
+            {/* Media Upload - Evidence */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Photo/Video Evidence
+                Photo/Video Evidence (Optional)
               </label>
               
               {!mediaPreview ? (
@@ -275,7 +449,7 @@ export default function ComplaintForm({ complaint, onSubmit, onCancel, isSubmitt
               <button 
                 type="submit" 
                 className="btn-primary flex-1"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !canSubmit}
               >
                 {isSubmitting ? (
                   <>
@@ -286,7 +460,7 @@ export default function ComplaintForm({ complaint, onSubmit, onCancel, isSubmitt
                     Submitting...
                   </>
                 ) : (
-                  complaint ? 'Update Complaint' : 'Submit Complaint'
+                  'Submit Complaint'
                 )}
               </button>
               <button 

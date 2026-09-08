@@ -114,6 +114,46 @@ export const complaintApi = {
   },
 
   /**
+   * Get all divisions
+   */
+  getDivisions: async (): Promise<string[]> => {
+    const response = await api.get<{ divisions: string[] }>('/api/locations/divisions');
+    return response.data.divisions;
+  },
+
+  /**
+   * Get districts for a division
+   */
+  getDistricts: async (division: string): Promise<string[]> => {
+    const response = await api.get<{ districts: string[] }>(`/api/locations/districts?division=${division}`);
+    return response.data.districts;
+  },
+
+  /**
+   * Get upazilas for a division and district
+   */
+  getUpazilas: async (division: string, district: string): Promise<string[]> => {
+    const response = await api.get<{ upazilas: string[] }>(
+      `/api/locations/upazilas?division=${division}&district=${district}`
+    );
+    return response.data.upazilas;
+  },
+
+  /**
+   * Check upazila availability
+   */
+  checkUpazilaAvailability: async (
+    division: string,
+    district: string,
+    upazila: string
+  ): Promise<any> => {
+    const response = await api.get(
+      `/api/upazila/availability?division=${division}&district=${district}&upazila=${upazila}`
+    );
+    return response.data;
+  },
+
+  /**
    * Get media URL
    */
   getMediaUrl: (mediaPath: string | null): string | null => {

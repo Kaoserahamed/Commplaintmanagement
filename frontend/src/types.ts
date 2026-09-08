@@ -1,5 +1,5 @@
 /**
- * TypeScript types for Complaint Management System
+ * TypeScript types for Bangladesh Civic Complaint Management System
  */
 
 export type ComplaintCategory = 
@@ -12,11 +12,9 @@ export type ComplaintCategory =
   | 'other';
 
 export type ComplaintStatus = 
-  | 'pending' 
-  | 'in_review' 
-  | 'in_progress' 
-  | 'resolved' 
-  | 'rejected';
+  | 'submitted' 
+  | 'in_process' 
+  | 'closed';
 
 export type ComplaintPriority = 'low' | 'medium' | 'high' | 'urgent';
 
@@ -27,46 +25,43 @@ export interface Complaint {
   category: ComplaintCategory;
   status: ComplaintStatus;
   priority: ComplaintPriority;
-  location: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  // Bangladesh Location Hierarchy
+  division: string;
+  district: string;
+  upazila: string;
+  local_area: string;
+  phone_number: string;
   media_url: string | null;
   media_type: string | null;
   created_at: string;
   updated_at: string;
+  closed_at: string | null;
+  admin_notes: string | null;
 }
 
 export interface ComplaintCreate {
   title: string;
   description: string;
   category: ComplaintCategory;
-  priority?: ComplaintPriority;
-  location?: string;
-  latitude?: number;
-  longitude?: number;
+  division: string;
+  district: string;
+  upazila: string;
+  local_area: string;
+  phone_number: string;
 }
 
-export interface ComplaintUpdate {
-  title?: string;
-  description?: string;
-  category?: ComplaintCategory;
-  status?: ComplaintStatus;
-  priority?: ComplaintPriority;
-  location?: string;
-  latitude?: number;
-  longitude?: number;
+export interface UpazilaAvailability {
+  available: boolean;
+  message: string;
+  existing_complaint: Complaint | null;
 }
 
 export interface DashboardStats {
   total_complaints: number;
-  pending: number;
-  in_review: number;
-  in_progress: number;
-  resolved: number;
-  rejected: number;
+  by_status: Record<string, number>;
   by_category: Record<string, number>;
   by_priority: Record<string, number>;
-  recent_complaints: Complaint[];
+  by_division: Record<string, number>;
 }
 
 export interface MediaUploadResponse {
@@ -90,11 +85,9 @@ export const CATEGORY_LABELS: Record<ComplaintCategory, string> = {
 };
 
 export const STATUS_LABELS: Record<ComplaintStatus, string> = {
-  pending: 'Pending',
-  in_review: 'In Review',
-  in_progress: 'In Progress',
-  resolved: 'Resolved',
-  rejected: 'Rejected',
+  submitted: 'Submitted',
+  in_process: 'In Process',
+  closed: 'Closed',
 };
 
 export const PRIORITY_LABELS: Record<ComplaintPriority, string> = {
@@ -103,3 +96,4 @@ export const PRIORITY_LABELS: Record<ComplaintPriority, string> = {
   high: 'High',
   urgent: 'Urgent',
 };
+

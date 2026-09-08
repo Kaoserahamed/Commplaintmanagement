@@ -18,11 +18,9 @@ class ComplaintCategory(str, Enum):
 
 class ComplaintStatus(str, Enum):
     """Complaint status enum for API."""
-    PENDING = "pending"
-    IN_REVIEW = "in_review"
-    IN_PROGRESS = "in_progress"
-    RESOLVED = "resolved"
-    REJECTED = "rejected"
+    SUBMITTED = "submitted"
+    IN_PROCESS = "in_process"
+    CLOSED = "closed"
 
 
 class ComplaintPriority(str, Enum):
@@ -33,52 +31,119 @@ class ComplaintPriority(str, Enum):
     URGENT = "urgent"
 
 
+# ============ Complaint Schemas ============
+
 class ComplaintBase(BaseModel):
     """Base schema for Complaint."""
     title: str = Field(..., min_length=1, max_length=200, description="Complaint title")
     description: str = Field(..., min_length=10, description="Detailed complaint description")
     category: ComplaintCategory = Field(..., description="Complaint category")
-    priority: ComplaintPriority = Field(default=ComplaintPriority.MEDIUM, description="Complaint priority")
-    location: Optional[str] = Field(None, max_length=500, description="Location of the issue")
-    latitude: Optional[float] = Field(None, ge=-90, le=90, description="Latitude coordinate")
-    longitude: Optional[float] = Field(None, ge=-180, le=180, description="Longitude coordinate")
+    
+    # Bangladesh Location Hierarchy (Required: Division → District → Upazila → Address)
+    division: str = Field(..., max_length=100, description="Division (e.g., Dhaka)")
+    district: str = Field(..., max_length=100, description="District (e.g., Dhaka)")
+    upazila: str = Field(..., max_length=100, description="Upazila/Thana (e.g., Savar)")
+    local_area: str = Field(..., max_length=200, description="Specific location/address")
+    
+    # Contact Information
+    phone_number: str = Field(..., min_length=11, max_length=20, description="Contact phone number")
 
 
 class ComplaintCreate(ComplaintBase):
-    """Schema for creating a complaint."""
+    """Schema for creating a complaint (citizen submission)."""
     pass
 
 
 class ComplaintUpdate(BaseModel):
-    """Schema for updating a complaint (all fields optional)."""
-    title: Optional[str] = Field(None, min_length=1, max_length=200, description="Complaint title")
-    description: Optional[str] = Field(None, min_length=10, description="Detailed complaint description")
-    category: Optional[ComplaintCategory] = Field(None, description="Complaint category")
-    status: Optional[ComplaintStatus] = Field(None, description="Complaint status")
-    priority: Optional[ComplaintPriority] = Field(None, description="Complaint priority")
-    location: Optional[str] = Field(None, max_length=500, description="Location of the issue")
-    latitude: Optional[float] = Field(None, ge=-90, le=90, description="Latitude coordinate")
-    longitude: Optional[float] = Field(None, ge=-180, le=180, description="Longitude coordinate")
+    """Schema for citizen updating their own complaint."""
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=10)
+    category: Optional[ComplaintCategory] = None
+    priority: Optional[ComplaintPriority] = None
+
+
+class AdminComplaintUpdate(BaseModel):
+    """Schema for admin to update complaint."""
+    status: Optional[ComplaintStatus] = None
+    priority: Optional[ComplaintPriority] = None
+    admin_notes: Optional[str] = None
 
 
 class ComplaintResponse(ComplaintBase):
     """Schema for complaint response."""
     id: int
     status: ComplaintStatus
+    priority: ComplaintPriority
     media_url: Optional[str]
     media_type: Optional[str]
     created_at: datetime
     updated_at: datetime
+    closed_at: Optional[datetime] = None
+    admin_notes: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
+class UpazilaAvailability(BaseModel):
+    """Schema for checking upazila availability."""
+    available: bool
+    message: str
+    existing_complaint: Optional[ComplaintResponse] = None
+
+
+# ============ Admin Schemas ============
+
+class AdminLogin(BaseModel):
+    """Schema for admin login."""
+    username: str = Field(..., description="Admin username")
+    password: str = Field(..., description="Admin password")
+
+
+class AdminToken(BaseModel):
+    """Schema for admin token response."""
+    access_token: str
+    token_type: str = "bearer"
+
+
+class AdminResponse(BaseModel):
+    """Schema for admin user response."""
+    id: int
+    username: str
+    email: str
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============ Location Schemas ============
+
+class LocationResponse(BaseModel):
+    """Schema for location data."""
+    divisions: list[str]
+
+
+class DistrictResponse(BaseModel):
+    """Schema for district list."""
+    districts: list[str]
+
+
+class UpazilaResponse(BaseModel):
+    """Schema for upazila list."""
+    upazilas: list[str]
+
+
+# ============ Dashboard Schemas ============
+
 class DashboardStats(BaseModel):
     """Schema for dashboard statistics."""
     total_complaints: int
+    by_status: dict[str, int]
     by_category: dict[str, int]
     by_priority: dict[str, int]
+    by_division: dict[str, int]
 
+
+# ============ General Schemas ============
 
 class HealthResponse(BaseModel):
     """Schema for health check response."""

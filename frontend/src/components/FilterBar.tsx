@@ -1,13 +1,13 @@
 /**
  * FilterBar component - Compact filters with total count
  */
-import { CATEGORY_LABELS, PRIORITY_LABELS } from '../types';
+import { CATEGORY_LABELS, STATUS_LABELS } from '../types';
 
 interface FilterBarProps {
   categoryFilter: string;
-  priorityFilter: string;
+  statusFilter: string;
   onCategoryChange: (category: string) => void;
-  onPriorityChange: (priority: string) => void;
+  onStatusChange: (status: string) => void;
   complaintCounts: {
     total: number;
     filtered: number;
@@ -16,9 +16,9 @@ interface FilterBarProps {
 
 export default function FilterBar({
   categoryFilter,
-  priorityFilter,
+  statusFilter,
   onCategoryChange,
-  onPriorityChange,
+  onStatusChange,
   complaintCounts,
 }: FilterBarProps) {
   return (
@@ -46,15 +46,15 @@ export default function FilterBar({
           </select>
         </div>
 
-        {/* Priority Filter */}
+        {/* Status Filter */}
         <div className="flex-1 min-w-[120px] sm:min-w-[180px]">
           <select
-            value={priorityFilter}
-            onChange={(e) => onPriorityChange(e.target.value)}
+            value={statusFilter}
+            onChange={(e) => onStatusChange(e.target.value)}
             className="w-full px-2 sm:px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-white"
           >
-            <option value="all">All Priorities</option>
-            {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
+            <option value="all">All Status</option>
+            {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>

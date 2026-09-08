@@ -49,11 +49,9 @@ export default function Dashboard() {
   }
 
   const statusStats = [
-    { label: 'Pending', value: stats.pending, color: 'bg-yellow-500', icon: '⏳' },
-    { label: 'In Review', value: stats.in_review, color: 'bg-blue-500', icon: '👀' },
-    { label: 'In Progress', value: stats.in_progress, color: 'bg-purple-500', icon: '⚙️' },
-    { label: 'Resolved', value: stats.resolved, color: 'bg-green-500', icon: '✅' },
-    { label: 'Rejected', value: stats.rejected, color: 'bg-red-500', icon: '❌' },
+    { label: 'Submitted', value: stats.by_status.submitted || 0, color: 'bg-blue-500', icon: '📝' },
+    { label: 'In Process', value: stats.by_status.in_process || 0, color: 'bg-yellow-500', icon: '⚙️' },
+    { label: 'Closed', value: stats.by_status.closed || 0, color: 'bg-green-500', icon: '✅' },
   ];
 
   return (
@@ -77,7 +75,7 @@ export default function Dashboard() {
       {/* Status Statistics */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Status Overview</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           {statusStats.map((stat) => (
             <div key={stat.label} className="text-center">
               <div className={`${stat.color} w-16 h-16 rounded-full flex items-center justify-center text-2xl mx-auto mb-2`}>

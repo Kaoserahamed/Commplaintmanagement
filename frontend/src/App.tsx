@@ -1,5 +1,5 @@
 /**
- * Main App component - Complaint Management System
+ * Main App component - Bangladesh Civic Complaint Management System
  */
 import { useState, useEffect } from 'react';
 import { complaintApi } from './services/api';
@@ -8,6 +8,7 @@ import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import ComplaintCard from './components/ComplaintCard';
 import ComplaintForm from './components/ComplaintForm';
+import Dashboard from './components/Dashboard';
 
 function App() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
@@ -15,12 +16,11 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editingComplaint, setEditingComplaint] = useState<Complaint | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // Fetch complaints on mount
   useEffect(() => {
@@ -30,7 +30,7 @@ function App() {
   // Apply filters when they change
   useEffect(() => {
     applyFilters();
-  }, [allComplaints, categoryFilter, priorityFilter]);
+  }, [allComplaints, categoryFilter, statusFilter]);
 
   const fetchComplaints = async () => {
     try {
@@ -53,8 +53,8 @@ function App() {
       filtered = filtered.filter((c) => c.category === categoryFilter);
     }
 
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter((c) => c.priority === priorityFilter);
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((c) => c.status === statusFilter);
     }
 
     setComplaints(filtered);
@@ -76,6 +76,7 @@ function App() {
       }
       
       setShowForm(false);
+      alert('Complaint submitted successfully!');
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to create complaint. Please try again.';
       alert(errorMessage);
@@ -85,50 +86,8 @@ function App() {
     }
   };
 
-  const handleUpdateComplaint = async (complaintData: ComplaintCreate, mediaFile?: File) => {
-    if (!editingComplaint) return;
-
-    try {
-      setIsSubmitting(true);
-      const updatedComplaint = await complaintApi.updateComplaint(editingComplaint.id, complaintData);
-      
-      // Upload media if provided
-      if (mediaFile) {
-        await complaintApi.uploadMedia(updatedComplaint.id, mediaFile);
-        // Refresh to get updated complaint with media
-        const updated = await complaintApi.getComplaint(updatedComplaint.id);
-        setAllComplaints(allComplaints.map((c) => (c.id === updated.id ? updated : c)));
-      } else {
-        setAllComplaints(allComplaints.map((c) => (c.id === updatedComplaint.id ? updatedComplaint : c)));
-      }
-      
-      setEditingComplaint(null);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to update complaint. Please try again.';
-      alert(errorMessage);
-      console.error('Error updating complaint:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteComplaint = async (id: number) => {
-    try {
-      await complaintApi.deleteComplaint(id);
-      setAllComplaints(allComplaints.filter((c) => c.id !== id));
-    } catch (err) {
-      alert('Failed to delete complaint. Please try again.');
-      console.error('Error deleting complaint:', err);
-    }
-  };
-
-  const handleEditComplaint = (complaint: Complaint) => {
-    setEditingComplaint(complaint);
-  };
-
   const handleCancelForm = () => {
     setShowForm(false);
-    setEditingComplaint(null);
   };
 
   const complaintCounts = {
@@ -141,12 +100,15 @@ function App() {
       <Header onCreateComplaint={() => setShowForm(true)} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        {/* Dashboard Statistics */}
+        <Dashboard />
+
         {/* Filters */}
         <FilterBar
           categoryFilter={categoryFilter}
-          priorityFilter={priorityFilter}
+          statusFilter={statusFilter}
           onCategoryChange={setCategoryFilter}
-          onPriorityChange={setPriorityFilter}
+          onStatusChange={setStatusFilter}
           complaintCounts={complaintCounts}
         />
 
@@ -184,7 +146,7 @@ function App() {
             <h3 className="mt-2 text-lg font-medium text-gray-900">No complaints found</h3>
             <p className="mt-1 text-sm text-gray-500">
               {allComplaints.length === 0
-                ? 'Get started by reporting your first issue.'
+                ? 'Get started by reporting your first civic issue.'
                 : 'No complaints match the selected filters.'}
             </p>
             {allComplaints.length === 0 && (
@@ -199,8 +161,6 @@ function App() {
               <ComplaintCard
                 key={complaint.id}
                 complaint={complaint}
-                onEdit={handleEditComplaint}
-                onDelete={handleDeleteComplaint}
               />
             ))}
           </div>
@@ -208,10 +168,9 @@ function App() {
       </main>
 
       {/* Complaint Form Modal */}
-      {(showForm || editingComplaint) && (
+      {showForm && (
         <ComplaintForm
-          complaint={editingComplaint}
-          onSubmit={editingComplaint ? handleUpdateComplaint : handleCreateComplaint}
+          onSubmit={handleCreateComplaint}
           onCancel={handleCancelForm}
           isSubmitting={isSubmitting}
         />
