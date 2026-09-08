@@ -59,8 +59,9 @@ export default function ComplaintCard({ complaint, onEdit, onDelete }: Complaint
           </div>
         </div>
         <div className="flex flex-col gap-2 items-end flex-shrink-0">
-          <span className={`badge ${priorityInfo.class} text-xs whitespace-nowrap`}>
-            {priorityInfo.icon} {PRIORITY_LABELS[complaint.priority]}
+          <span className={`badge ${priorityInfo.class} text-xs whitespace-nowrap flex items-center gap-1`}>
+            <span>{priorityInfo.icon}</span>
+            <span>{PRIORITY_LABELS[complaint.priority]}</span>
           </span>
         </div>
       </div>
