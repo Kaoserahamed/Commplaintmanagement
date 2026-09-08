@@ -46,7 +46,7 @@ export default function ComplaintCard({ complaint, onEdit, onDelete }: Complaint
   const isVideo = complaint.media_type === 'video';
 
   return (
-    <div className="card p-5 border-l-4 border-primary-500 hover:shadow-xl transition-all flex flex-col">
+    <div className="card p-5 border-l-4 border-primary-500 hover:shadow-xl transition-all flex flex-col h-full">
       {/* Header with Category and Priority */}
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -54,7 +54,7 @@ export default function ComplaintCard({ complaint, onEdit, onDelete }: Complaint
             {categoryIcon}
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{complaint.title}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{complaint.title}</h3>
             <p className="text-xs text-gray-500">{CATEGORY_LABELS[complaint.category]}</p>
           </div>
         </div>
@@ -66,48 +66,44 @@ export default function ComplaintCard({ complaint, onEdit, onDelete }: Complaint
         </div>
       </div>
 
-      {/* Content Section - Grows to fill space */}
-      <div className="flex-1 flex flex-col">
-        {/* Description - Fixed height */}
-        <p className="text-gray-700 mb-3 text-sm line-clamp-3 h-[4.5rem]">{complaint.description}</p>
+      {/* Description */}
+      <p className="text-gray-700 mb-3 text-sm line-clamp-3">{complaint.description}</p>
 
-        {/* Location - Fixed height slot */}
-        <div className="h-6 mb-3">
-          {complaint.location && (
-            <div className="flex items-center gap-1 text-xs text-gray-600">
-              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="truncate">{complaint.location}</span>
-            </div>
+      {/* Location */}
+      {complaint.location && (
+        <div className="flex items-center gap-1 text-xs text-gray-600 mb-3">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span className="truncate">{complaint.location}</span>
+        </div>
+      )}
+
+      {/* Media Preview */}
+      {mediaUrl && (
+        <div className="mb-3">
+          {isVideo ? (
+            <video
+              src={mediaUrl}
+              controls
+              className="w-full h-48 object-cover rounded-lg bg-gray-100"
+            />
+          ) : (
+            <img
+              src={mediaUrl}
+              alt="Complaint evidence"
+              className="w-full h-48 object-cover rounded-lg bg-gray-100"
+            />
           )}
         </div>
+      )}
 
-        {/* Media Preview - Fixed height slot */}
-        <div className="h-48 mb-3">
-          {mediaUrl && (
-            <>
-              {isVideo ? (
-                <video
-                  src={mediaUrl}
-                  controls
-                  className="w-full h-full object-cover rounded-lg bg-gray-100"
-                />
-              ) : (
-                <img
-                  src={mediaUrl}
-                  alt="Complaint evidence"
-                  className="w-full h-full object-cover rounded-lg bg-gray-100"
-                />
-              )}
-            </>
-          )}
-        </div>
-      </div>
+      {/* Spacer to push footer to bottom */}
+      <div className="flex-1"></div>
 
-      {/* Footer Section - Fixed at bottom */}
-      <div className="mt-auto pt-3 border-t">
+      {/* Footer - Always at bottom */}
+      <div className="pt-3 border-t mt-3">
         {/* Metadata */}
         <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
           <span>ID: #{complaint.id}</span>
