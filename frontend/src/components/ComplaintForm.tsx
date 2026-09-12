@@ -153,27 +153,61 @@ export default function ComplaintForm({ onSubmit, onCancel, isSubmitting }: Comp
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if upazila is available
-    if (!availability?.available) {
-      alert('Please select an available upazila/thana before submitting.');
+    // Validation with clear error messages
+    if (!title.trim()) {
+      alert('Please enter a title for your complaint.');
       return;
     }
     
-    if (title.trim() && description.trim().length >= 10) {
-      onSubmit(
-        {
-          title: title.trim(),
-          category,
-          division,
-          district,
-          upazila,
-          local_area: localArea.trim(),
-          phone_number: phoneNumber.trim(),
-          description: description.trim(),
-        },
-        mediaFile || undefined
-      );
+    if (title.trim().length < 10) {
+      alert('Title must be at least 10 characters long.');
+      return;
     }
+    
+    if (!division || !district || !upazila) {
+      alert('Please select Division, District, and Upazila.');
+      return;
+    }
+    
+    if (!availability?.available) {
+      alert('The selected upazila already has an active complaint. Please wait until it is resolved or select a different upazila.');
+      return;
+    }
+    
+    if (!localArea.trim()) {
+      alert('Please provide a specific location/address.');
+      return;
+    }
+    
+    if (!phoneNumber.trim()) {
+      alert('Please provide a contact phone number.');
+      return;
+    }
+    
+    if (!description.trim()) {
+      alert('Please provide a description of the problem.');
+      return;
+    }
+    
+    if (description.trim().length < 20) {
+      alert(`Description must be at least 20 characters long. You have entered ${description.trim().length} characters.`);
+      return;
+    }
+    
+    // All validation passed, submit
+    onSubmit(
+      {
+        title: title.trim(),
+        category,
+        division,
+        district,
+        upazila,
+        local_area: localArea.trim(),
+        phone_number: phoneNumber.trim(),
+        description: description.trim(),
+      },
+      mediaFile || undefined
+    );
   };
 
   const isVideo = (url: string | null) => {
@@ -182,8 +216,12 @@ export default function ComplaintForm({ onSubmit, onCancel, isSubmitting }: Comp
            mediaFile?.type.startsWith('video/');
   };
 
-  const canSubmit = availability?.available && title.trim() && description.trim().length >= 10 && 
-                    division && district && upazila && localArea.trim() && phoneNumber.trim();
+  const canSubmit = availability?.available && 
+                    title.trim().length >= 10 && 
+                    description.trim().length >= 20 && 
+                    division && district && upazila && 
+                    localArea.trim() && 
+                    phoneNumber.trim();
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -204,12 +242,22 @@ export default function ComplaintForm({ onSubmit, onCancel, isSubmitting }: Comp
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="input-field"
-                placeholder="Brief description of the issue"
+                className={`input-field ${
+                  title.length > 0 && title.length < 10 
+                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                    : ''
+                }`}
+                placeholder="Brief description of the issue (minimum 10 characters)"
                 required
+                minLength={10}
                 maxLength={200}
                 autoFocus
               />
+              {title.length > 0 && title.length < 10 && (
+                <p className="text-xs text-red-600 font-medium mt-1">
+                  ⚠️ Title must be at least 10 characters long ({title.length}/10)
+                </p>
+              )}
             </div>
 
             {/* Category */}
@@ -366,14 +414,27 @@ export default function ComplaintForm({ onSubmit, onCancel, isSubmitting }: Comp
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="input-field resize-none"
-                placeholder="Provide detailed information about the problem (minimum 10 characters)"
+                className={`input-field resize-none ${
+                  description.length > 0 && description.length < 20 
+                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                    : ''
+                }`}
+                placeholder="Provide detailed information about the problem (minimum 20 characters)"
                 rows={5}
                 required
-                minLength={10}
+                minLength={20}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {description.length}/1000 characters {description.length < 10 && '(minimum 10 required)'}
+              <p className={`text-xs mt-1 ${
+                description.length > 0 && description.length < 20 
+                  ? 'text-red-600 font-medium' 
+                  : 'text-gray-500'
+              }`}>
+                {description.length}/1000 characters 
+                {description.length > 0 && description.length < 20 && (
+                  <span className="ml-1 text-red-600 font-semibold">
+                    ⚠️ Need at least {20 - description.length} more characters
+                  </span>
+                )}
               </p>
             </div>
 
